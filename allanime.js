@@ -134,7 +134,7 @@ async function graphqlRequest(query, variables, label = null) {
 /**
  * Search for anime
  */
-async function search(query) {
+async function search(query, mode = 'sub') {
     const q = query.trim();
     if (!q) return [];
 
@@ -157,7 +157,7 @@ async function search(query) {
         },
         limit: 40,
         page: 1,
-        translationType: 'sub',
+        translationType: mode,
         countryOrigin: 'ALL'
     };
 
@@ -174,7 +174,7 @@ async function search(query) {
 
         if (!animeId || !name) continue;
 
-        const epCount = episodes.sub || 0;
+        const epCount = episodes[mode] || 0;
         if (epCount === 0) continue;
 
         results.push({
@@ -190,7 +190,7 @@ async function search(query) {
 /**
  * Get anime details
  */
-async function getDetails(animeId) {
+async function getDetails(animeId, mode = 'sub') {
     const gql = `query ($showId: String!) {
         show(_id: $showId) {
             _id
@@ -214,7 +214,7 @@ async function getDetails(animeId) {
     const thumbnail = show.thumbnail;
 
     const epDetail = show.availableEpisodesDetail || {};
-    const epList = epDetail.sub || [];
+    const epList = epDetail[mode] || [];
 
     const episodes = [];
     const sortedEpList = epList.sort((a, b) => {
@@ -244,7 +244,7 @@ async function getDetails(animeId) {
 /**
  * Get episodes for an anime
  */
-async function getEpisodes(animeId) {
+async function getEpisodes(animeId, mode = 'sub') {
     const gql = `query ($showId: String!) {
         show(_id: $showId) {
             _id
@@ -259,7 +259,7 @@ async function getEpisodes(animeId) {
 
     const show = data.data.show;
     const epDetail = show.availableEpisodesDetail || {};
-    const epList = epDetail.sub || [];
+    const epList = epDetail[mode] || [];
 
     const episodes = [];
     const sortedEpList = epList.sort((a, b) => {
@@ -386,7 +386,7 @@ function extractSourcePairsFromRaw(raw) {
 /**
  * Get stream URLs for an episode
  */
-async function getStreams(animeId, episodeId) {
+async function getStreams(animeId, episodeId, mode = 'sub') {
     let showId, epNo;
 
     if (episodeId.includes('::ep=')) {
@@ -407,7 +407,7 @@ async function getStreams(animeId, episodeId) {
 
     const variables = {
         showId: showId,
-        translationType: 'sub',
+        translationType: mode,
         episodeString: epNo
     };
 
