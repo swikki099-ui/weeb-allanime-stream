@@ -7,8 +7,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
+app.use(express.static('.'));
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
 
 // Health check
 app.get('/health', (req, res) => {
@@ -26,7 +37,7 @@ app.get('/allanime/search', async (req, res) => {
         }
 
         console.log(`[AllAnime] Searching for: ${q}`);
-        const results = await allanime.search(q);
+        const results = await allanime.search(q, 'sub');
 
         res.json({
             success: true,
@@ -50,7 +61,7 @@ app.get('/allanime/anime/:id', async (req, res) => {
         const { id } = req.params;
 
         console.log(`[AllAnime] Getting details for anime ID: ${id}`);
-        const details = await allanime.getDetails(id);
+        const details = await allanime.getDetails(id, 'sub');
 
         if (!details) {
             return res.status(404).json({
@@ -79,7 +90,7 @@ app.get('/allanime/anime/:id/episodes', async (req, res) => {
         const { id } = req.params;
 
         console.log(`[AllAnime] Getting episodes for anime ID: ${id}`);
-        const episodes = await allanime.getEpisodes(id);
+        const episodes = await allanime.getEpisodes(id, 'sub');
 
         res.json({
             success: true,
@@ -101,14 +112,16 @@ app.get('/allanime/anime/:id/episodes', async (req, res) => {
 app.get('/allanime/anime/:id/episode/:episodeId/streams', async (req, res) => {
     try {
         const { id, episodeId } = req.params;
+        const { mode = 'sub' } = req.query;
 
-        console.log(`[AllAnime] Getting streams for anime ID: ${id}, episode: ${episodeId}`);
-        const streams = await allanime.getStreams(id, episodeId);
+        console.log(`[AllAnime] Getting streams for anime ID: ${id}, episode: ${episodeId} (mode: ${mode})`);
+        const streams = await allanime.getStreams(id, episodeId, mode);
 
         res.json({
             success: true,
             anime_id: id,
             episode_id: episodeId,
+            mode: mode,
             count: streams.length,
             streams: streams
         });
@@ -126,7 +139,7 @@ app.get('/allanime/anime/:id/episode/:episodeId/streams', async (req, res) => {
 app.get('/allanime/anime/:id/streams', async (req, res) => {
     try {
         const { id } = req.params;
-        const { episode } = req.query;
+        const { episode, mode = 'sub' } = req.query;
 
         if (!episode) {
             return res.status(400).json({
@@ -137,13 +150,14 @@ app.get('/allanime/anime/:id/streams', async (req, res) => {
 
         const episodeId = `${id}::ep=${episode}`;
 
-        console.log(`[AllAnime] Getting streams for anime ID: ${id}, episode: ${episode}`);
-        const streams = await allanime.getStreams(id, episodeId);
+        console.log(`[AllAnime] Getting streams for anime ID: ${id}, episode: ${episode} (mode: ${mode})`);
+        const streams = await allanime.getStreams(id, episodeId, mode);
 
         res.json({
             success: true,
             anime_id: id,
             episode_number: episode,
+            mode: mode,
             count: streams.length,
             streams: streams
         });
@@ -320,6 +334,7 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`Anime Scraper API running on http://localhost:${PORT}`);
+    console.log(`HTML interface: http://localhost:${PORT}/index.html`);
     console.log(`Available endpoints:`);
     console.log(`  GET /health - Health check`);
     console.log(`  GET /allanime/search?q=query - Search anime (AllAnime)`);
