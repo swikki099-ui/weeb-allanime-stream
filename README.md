@@ -1,348 +1,208 @@
-const express = require('express');
-const cors = require('cors');
-const allanime = require('./allanime');
-const weeb = require('./weeb');
+# Anime Scraper API - Node.js/Express.js
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+A pure REST API anime scraper using the AllAnime and Weeb APIs, ported from the Weeb CLI project with improvements from ani-cli.
 
-// Middleware
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json());
-app.use((req, res, next) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
-});
+## Features
 
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', providers: ['allanime', 'weeb'] });
-});
+- ✅ Pure REST API with Express.js
+- ✅ Search for anime
+- ✅ Get anime details
+- ✅ Get episode lists
+- ✅ Get streaming URLs for episodes (with curl fallback for CAPTCHA)
+- ✅ Sub/Dub mode support for AllAnime streaming
+- ✅ Provider-specific API endpoints
+- ✅ CORS-enabled for frontend integration
 
-// ========== AllAnime Routes ==========
-// Search for anime
-app.get('/allanime/search', async (req, res) => {
-    try {
-        const { q } = req.query;
+## Installation
 
-        if (!q) {
-            return res.status(400).json({ error: 'Query parameter "q" is required' });
-        }
+```bash
+cd anime-scraper-nodejs
+npm install
+```
 
-        console.log(`[AllAnime] Searching for: ${q}`);
-        const results = await allanime.search(q, 'sub');
+## Deployment
 
-        res.json({
-            success: true,
-            query: q,
-            count: results.length,
-            results: results
-        });
-    } catch (error) {
-        console.error('[AllAnime] Search error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to search for anime',
-            message: error.message
-        });
-    }
-});
+### Local Development
 
-// Get anime details
-app.get('/allanime/anime/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
+```bash
+npm start
+```
 
-        console.log(`[AllAnime] Getting details for anime ID: ${id}`);
-        const details = await allanime.getDetails(id, 'sub');
+The server will run on `https://weeb-allanime-stream.vercel.app`
 
-        if (!details) {
-            return res.status(404).json({
-                success: false,
-                error: 'Anime not found'
-            });
-        }
+### Vercel Deployment
 
-        res.json({
-            success: true,
-            data: details
-        });
-    } catch (error) {
-        console.error('[AllAnime] Details error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get anime details',
-            message: error.message
-        });
-    }
-});
+This project is configured for Vercel deployment. To deploy:
 
-// Get episodes for an anime
-app.get('/allanime/anime/:id/episodes', async (req, res) => {
-    try {
-        const { id } = req.params;
+1. Install Vercel CLI:
+```bash
+npm i -g vercel
+```
 
-        console.log(`[AllAnime] Getting episodes for anime ID: ${id}`);
-        const episodes = await allanime.getEpisodes(id, 'sub');
+2. Deploy to Vercel:
+```bash
+vercel
+```
 
-        res.json({
-            success: true,
-            anime_id: id,
-            count: episodes.length,
-            episodes: episodes
-        });
-    } catch (error) {
-        console.error('[AllAnime] Episodes error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get episodes',
-            message: error.message
-        });
-    }
-});
+Or connect your GitHub repository to Vercel for automatic deployments.
 
-// Get stream URLs for an episode
-app.get('/allanime/anime/:id/episode/:episodeId/streams', async (req, res) => {
-    try {
-        const { id, episodeId } = req.params;
-        const { mode = 'sub' } = req.query;
+The project includes:
+- `vercel.json` - Vercel configuration
+- `package.json` - Build scripts and dependencies
+- `server.js` - Express server configured for Vercel
 
-        console.log(`[AllAnime] Getting streams for anime ID: ${id}, episode: ${episodeId} (mode: ${mode})`);
-        const streams = await allanime.getStreams(id, episodeId, mode);
+## Usage
 
-        res.json({
-            success: true,
-            anime_id: id,
-            episode_id: episodeId,
-            mode: mode,
-            count: streams.length,
-            streams: streams
-        });
-    } catch (error) {
-        console.error('[AllAnime] Streams error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get stream URLs',
-            message: error.message
-        });
-    }
-});
+### Start the API Server
 
-// Get stream URLs using episode number
-app.get('/allanime/anime/:id/streams', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { episode, mode = 'sub' } = req.query;
+```bash
+npm start
+```
 
-        if (!episode) {
-            return res.status(400).json({
-                success: false,
-                error: 'Query parameter "episode" is required'
-            });
-        }
+The server will run on `https://weeb-allanime-stream.vercel.app`
 
-        const episodeId = `${id}::ep=${episode}`;
+### Test the Scraper
 
-        console.log(`[AllAnime] Getting streams for anime ID: ${id}, episode: ${episode} (mode: ${mode})`);
-        const streams = await allanime.getStreams(id, episodeId, mode);
+```bash
+npm test
+```
 
-        res.json({
-            success: true,
-            anime_id: id,
-            episode_number: episode,
-            mode: mode,
-            count: streams.length,
-            streams: streams
-        });
-    } catch (error) {
-        console.error('[AllAnime] Streams error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get stream URLs',
-            message: error.message
-        });
-    }
-});
+This will run a test script that:
+1. Searches for "One Piece"
+2. Gets anime details
+3. Gets episode list
+4. Gets stream URLs for the first episode
 
-// ========== Weeb Routes ==========
-// Search for anime
-app.get('/weeb/search', async (req, res) => {
-    try {
-        const { q } = req.query;
+## API Endpoints
 
-        if (!q) {
-            return res.status(400).json({ error: 'Query parameter "q" is required' });
-        }
+### Health Check
+```
+GET /health
+```
 
-        console.log(`[Weeb] Searching for: ${q}`);
-        const results = await weeb.search(q);
+### AllAnime Endpoints
+```
+GET /allanime/search?q=One Piece
+GET /allanime/anime/:id
+GET /allanime/anime/:id/episodes
+GET /allanime/anime/:id/streams?episode=1&mode=sub
+GET /allanime/anime/:id/episode/:episodeId/streams?mode=sub
+```
 
-        res.json({
-            success: true,
-            query: q,
-            count: results.length,
-            results: results
-        });
-    } catch (error) {
-        console.error('[Weeb] Search error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to search for anime',
-            message: error.message
-        });
-    }
-});
+**Note:** AllAnime streaming endpoints support an optional `mode` parameter:
+- `mode=sub` (default) - Subtitled version
+- `mode=dub` - Dubbed version
 
-// Get anime details
-app.get('/weeb/anime/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
+### Weeb Endpoints
+```
+GET /weeb/search?q=One Piece
+GET /weeb/anime/:id
+GET /weeb/anime/:id/episodes
+GET /weeb/anime/:id/streams?episode=1
+GET /weeb/anime/:id/episode/:episodeId/streams
+```
 
-        console.log(`[Weeb] Getting details for anime ID: ${id}`);
-        const details = await weeb.getDetails(id);
+## Example Usage
 
-        if (!details) {
-            return res.status(404).json({
-                success: false,
-                error: 'Anime not found'
-            });
-        }
+### Using curl
 
-        res.json({
-            success: true,
-            data: details
-        });
-    } catch (error) {
-        console.error('[Weeb] Details error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get anime details',
-            message: error.message
-        });
-    }
-});
+```bash
+# AllAnime - Search for anime
+curl "https://weeb-allanime-stream.vercel.app/allanime/search?q=One Piece"
 
-// Get episodes for an anime
-app.get('/weeb/anime/:id/episodes', async (req, res) => {
-    try {
-        const { id } = req.params;
+# AllAnime - Get anime details
+curl "https://weeb-allanime-stream.vercel.app/allanime/anime/anime-id-here"
 
-        console.log(`[Weeb] Getting episodes for anime ID: ${id}`);
-        const episodes = await weeb.getEpisodes(id);
+# AllAnime - Get episodes
+curl "https://weeb-allanime-stream.vercel.app/allanime/anime/anime-id-here/episodes"
 
-        res.json({
-            success: true,
-            anime_id: id,
-            count: episodes.length,
-            episodes: episodes
-        });
-    } catch (error) {
-        console.error('[Weeb] Episodes error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get episodes',
-            message: error.message
-        });
-    }
-});
+# AllAnime - Get streams for episode 1 (sub)
+curl "https://weeb-allanime-stream.vercel.app/allanime/anime/anime-id-here/streams?episode=1&mode=sub"
 
-// Get stream URLs for an episode
-app.get('/weeb/anime/:id/episode/:episodeId/streams', async (req, res) => {
-    try {
-        const { id, episodeId } = req.params;
+# AllAnime - Get streams for episode 1 (dub)
+curl "https://weeb-allanime-stream.vercel.app/allanime/anime/anime-id-here/streams?episode=1&mode=dub"
 
-        console.log(`[Weeb] Getting streams for anime ID: ${id}, episode: ${episodeId}`);
-        const streams = await weeb.getStreams(id, episodeId);
+# Weeb - Search for anime
+curl "https://weeb-allanime-stream.vercel.app/weeb/search?q=One Piece"
 
-        res.json({
-            success: true,
-            anime_id: id,
-            episode_id: episodeId,
-            count: streams.length,
-            streams: streams
-        });
-    } catch (error) {
-        console.error('[Weeb] Streams error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get stream URLs',
-            message: error.message
-        });
-    }
-});
+# Weeb - Get anime details
+curl "https://weeb-allanime-stream.vercel.app/weeb/anime/one-piece"
 
-// Get stream URLs using episode number
-app.get('/weeb/anime/:id/streams', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { episode } = req.query;
+# Weeb - Get episodes
+curl "https://weeb-allanime-stream.vercel.app/weeb/anime/one-piece/episodes"
 
-        if (!episode) {
-            return res.status(400).json({
-                success: false,
-                error: 'Query parameter "episode" is required'
-            });
-        }
+# Weeb - Get streams for episode 1
+curl "https://weeb-allanime-stream.vercel.app/weeb/anime/one-piece/streams?episode=1"
+```
 
-        const episodeId = `${id}::ep=${episode}`;
+### Using JavaScript/Node.js
 
-        console.log(`[Weeb] Getting streams for anime ID: ${id}, episode: ${episode}`);
-        const streams = await weeb.getStreams(id, episodeId);
+```javascript
+const axios = require('axios');
 
-        res.json({
-            success: true,
-            anime_id: id,
-            episode_number: episode,
-            count: streams.length,
-            streams: streams
-        });
-    } catch (error) {
-        console.error('[Weeb] Streams error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get stream URLs',
-            message: error.message
-        });
-    }
-});
+// AllAnime - Search
+const search = await axios.get('https://weeb-allanime-stream.vercel.app/allanime/search?q=One Piece');
+console.log(search.data.results);
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ 
-        success: false, 
-        error: 'Endpoint not found' 
-    });
-});
+// AllAnime - Get details
+const details = await axios.get(`https://weeb-allanime-stream.vercel.app/allanime/anime/${search.data.results[0].id}`);
+console.log(details.data);
 
-// Error handler
-app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
-    res.status(500).json({ 
-        success: false, 
-        error: 'Internal server error',
-        message: err.message 
-    });
-});
+// AllAnime - Get streams (sub)
+const streams = await axios.get(`https://weeb-allanime-stream.vercel.app/allanime/anime/${search.data.results[0].id}/streams?episode=1&mode=sub`);
+console.log(streams.data.streams);
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Anime Scraper API running on http://localhost:${PORT}`);
-    console.log(`Available endpoints:`);
-    console.log(`  GET /health - Health check`);
-    console.log(`  GET /allanime/search?q=query - Search anime (AllAnime)`);
-    console.log(`  GET /allanime/anime/:id - Get anime details (AllAnime)`);
-    console.log(`  GET /allanime/anime/:id/episodes - Get episodes (AllAnime)`);
-    console.log(`  GET /allanime/anime/:id/streams?episode=1&mode=sub - Get streams by episode number (AllAnime)`);
-    console.log(`  GET /allanime/anime/:id/episode/:episodeId/streams?mode=sub - Get streams by episode ID (AllAnime)`);
-    console.log(`  GET /weeb/search?q=query - Search anime (Weeb)`);
-    console.log(`  GET /weeb/anime/:id - Get anime details (Weeb)`);
-    console.log(`  GET /weeb/anime/:id/episodes - Get episodes (Weeb)`);
-    console.log(`  GET /weeb/anime/:id/streams?episode=1 - Get streams by episode number (Weeb)`);
-    console.log(`  GET /weeb/anime/:id/episode/:episodeId/streams - Get streams by episode ID (Weeb)`);
-});
+// AllAnime - Get streams (dub)
+const streamsDub = await axios.get(`https://weeb-allanime-stream.vercel.app/allanime/anime/${search.data.results[0].id}/streams?episode=1&mode=dub`);
+console.log(streamsDub.data.streams);
+
+// Weeb - Search
+const weebSearch = await axios.get('https://weeb-allanime-stream.vercel.app/weeb/search?q=One Piece');
+console.log(weebSearch.data.results);
+
+// Weeb - Get details
+const weebDetails = await axios.get(`https://weeb-allanime-stream.vercel.app/weeb/anime/${weebSearch.data.results[0].id}`);
+console.log(weebDetails.data);
+
+// Weeb - Get streams
+const weebStreams = await axios.get(`https://weeb-allanime-stream.vercel.app/weeb/anime/${weebSearch.data.results[0].id}/streams?episode=1`);
+console.log(weebStreams.data.streams);
+```
+
+## Current Status
+
+### Working Features
+- ✅ **AllAnime Provider**: Search, details, episodes, and streams with curl fallback for CAPTCHA handling
+- ✅ **AllAnime Sub/Dub Support**: Mode parameter for streaming endpoints to switch between subtitled and dubbed versions
+- ✅ **Weeb Provider**: Search, details, episodes, and streams without CAPTCHA requirements
+- ✅ **Provider-specific Routes**: API endpoints organized by provider (/allanime/, /weeb/)
+- ✅ **Pure REST API**: No web interface, designed for API-only usage
+
+## Notes
+
+### AllAnime Provider
+- Uses the AllAnime API (api.allanime.day)
+- Implements curl fallback mechanism from ani-cli to handle CAPTCHA protection
+- Uses persisted GraphQL queries with proper hash for stream endpoints
+- AES-256-CTR decryption for encrypted "tobeparsed" response fields
+- Multiple fallback strategies: persisted query → curl → POST → curl POST
+- Proper headers (Referer, Origin) matching the ani-cli implementation
+- **Sub/Dub Mode Support**: Streaming endpoints accept `mode=sub|dub` parameter
+  - Search and details endpoints use default 'sub' mode
+  - Only streaming endpoints support mode switching
+  - Not all anime have both sub and dub versions available
+
+### Weeb Provider
+- Uses the Weeb API (anime-api.ewgsta.workers.dev)
+- Provides direct stream URLs without CAPTCHA protection
+- Multiple stream sources available (Primary CDN, Mirror 1, Mirror 2)
+- No additional authentication or headers required
+
+### API Structure
+- Provider-specific routes for clear separation between sources
+- Both providers support the same endpoint structure
+- Health check endpoint lists available providers
+
+## License
+
+MIT
